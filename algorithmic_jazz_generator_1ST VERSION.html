@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReLacks | Algorithmic Jazz Chord & Beat Generator</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&family=Inter:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              black: '#070709',
+              card: '#0f0d11',
+              border: '#3b0b11',
+              red: '#dc2626',
+              darkred: '#7f1d1d',
+              blood: '#500000',
+              accent: '#ff2a3b',
+              glow: 'rgba(220, 38, 38, 0.3)'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #070709;
+      color: #e2e8f0;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(127, 29, 29, 0.25), transparent 75%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 28px 28px, 28px 28px;
+    }
+
+    .glow-border {
+      box-shadow: 0 0 20px rgba(220, 38, 38, 0.2), inset 0 0 10px rgba(127, 29, 29, 0.2);
+      border: 1px solid rgba(220, 38, 38, 0.4);
+    }
+    .text-glow {
+      text-shadow: 0 0 12px rgba(220, 38, 38, 0.7);
+    }
+
+    .piano-key-white {
+      background: linear-gradient(to bottom, #e2e8f0 0%, #cbd5e1 100%);
+      transition: all 0.1s ease;
+    }
+    .piano-key-white.active {
+      background: linear-gradient(to bottom, #ef4444 0%, #dc2626 100%) !important;
+      box-shadow: 0 0 15px #dc2626;
+      transform: translateY(2px);
+    }
+    .piano-key-black {
+      background: linear-gradient(to bottom, #1e293b 0%, #0f172a 100%);
+      transition: all 0.1s ease;
+    }
+    .piano-key-black.active {
+      background: linear-gradient(to bottom, #7f1d1d 0%, #dc2626 100%) !important;
+      box-shadow: 0 0 15px #dc2626;
+      transform: translateY(2px);
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #070709; }
+    ::-webkit-scrollbar-thumb { background: #3b0b11; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #dc2626; }
+  </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col justify-between selection:bg-brand-red selection:text-white">
+
+  <!-- TOP HEADER / NAVIGATION -->
+  <header class="border-b border-brand-border bg-brand-black/90 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-brand-red/20 border border-brand-red flex items-center justify-center text-brand-red text-xl font-bold shadow-lg shadow-brand-red/20">
+          <i class="fa-solid fa-compact-disc fa-spin" style="--fa-animation-duration: 8s;"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold tracking-wider text-white text-lg font-mono">ReLacks</span>
+            <span class="text-xs bg-brand-red/20 border border-brand-red/40 text-brand-red font-mono px-2 py-0.5 rounded">PRODUCER ENGINE</span>
+          </div>
+          <p class="text-[10px] text-neutral-400 font-mono">Powered by Web Audio API & Python DSP Logic</p>
+        </div>
+      </div>
+
+      <nav class="hidden md:flex items-center space-x-6 text-xs font-mono text-neutral-300">
+        <a href="#generator" class="hover:text-brand-red transition-colors"><i class="fa-solid fa-sliders text-brand-red mr-1"></i> Generator</a>
+        <a href="#visualizer" class="hover:text-brand-red transition-colors"><i class="fa-solid fa-wave-square text-brand-red mr-1"></i> Voicing Matrix</a>
+        <a href="#cli" class="hover:text-brand-red transition-colors"><i class="fa-solid fa-terminal text-brand-red mr-1"></i> CLI Terminal</a>
+        <a href="#repo" class="hover:text-brand-red transition-colors"><i class="fa-brands fa-github text-brand-red mr-1"></i> Python Codebase</a>
+      </nav>
+
+      <div class="flex items-center space-x-3">
+        <button id="quick-play-header" class="px-3.5 py-1.5 rounded bg-brand-red text-white text-xs font-mono font-bold hover:bg-brand-accent transition-all shadow-lg shadow-brand-red/25 flex items-center gap-1.5">
+          <i class="fa-solid fa-play"></i> DEMO LOOP
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10 flex-grow">
+
+    <!-- HERO / BRANDING SECTION -->
+    <section class="relative rounded-2xl bg-brand-card/90 p-6 md:p-10 border border-brand-border overflow-hidden glow-border">
+      <div class="absolute -right-24 -bottom-24 w-96 h-96 bg-brand-darkred/30 rounded-full blur-3xl pointer-events-none"></div>
+      
+      <div class="max-w-3xl space-y-4 relative z-10">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/30 text-brand-red text-xs font-mono">
+          <span class="w-2 h-2 rounded-full bg-brand-red animate-ping"></span>
+          BY ReLacks | Mechanical Engineering x Jazzhop Synthesis
+        </div>
+
+        <h1 class="text-3xl md:text-5xl font-black text-white tracking-tight leading-tight uppercase font-mono">
+          Algorithmic Jazz Chord & <span class="text-brand-red text-glow">Beat Generator</span>
+        </h1>
+
+        <p class="text-neutral-300 text-sm md:text-base leading-relaxed">
+          Designed by <strong class="text-white">ReLacks</strong>. Discover rich jazz chord progressions (7th, 9th, 13th extensions, rootless shell voicings) programmatically synchronized over syncopated lo-fi drum grids.
+        </p>
+
+        <div class="pt-1 flex flex-wrap gap-3 text-xs font-mono">
+          <div class="flex items-center gap-2 text-neutral-300 bg-black/60 px-3 py-1.5 rounded border border-neutral-800">
+            <i class="fa-solid fa-bolt text-brand-red"></i> Powered by Web Audio API & Python DSP
+          </div>
+          <div class="flex items-center gap-2 text-neutral-300 bg-black/60 px-3 py-1.5 rounded border border-neutral-800">
+            <i class="fa-solid fa-code text-brand-red"></i> Custom MIDI / Scale Math Engine
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 1: INTERACTIVE WEB AUDIO GENERATOR -->
+    <section id="generator" class="space-y-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-brand-border pb-4">
+        <div>
+          <h2 class="text-2xl font-bold font-mono text-white flex items-center gap-2">
+            <span class="text-brand-red">01.</span> ReLacks DSP GENERATOR
+          </h2>
+          <p class="text-xs font-mono text-neutral-400">Synthesize real 4-part & 5-part jazz extensions with drum groove sync</p>
+        </div>
+        <div class="flex items-center gap-3 text-xs font-mono">
+          <span class="text-neutral-400">STATUS:</span>
+          <span class="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Audio Context Ready
+          </span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- CONTROLS PANEL -->
+        <div class="lg:col-span-5 bg-brand-card rounded-xl p-6 border border-brand-border space-y-6">
+          
+          <!-- Key Selector -->
+          <div>
+            <label class="block text-xs font-mono text-neutral-400 uppercase tracking-wider mb-2">
+              <i class="fa-solid fa-key text-brand-red mr-1"></i> Root Key
+            </label>
+            <div class="grid grid-cols-4 gap-2" id="key-selector"></div>
+          </div>
+
+          <!-- Style Preset Buttons -->
+          <div>
+            <label class="block text-xs font-mono text-neutral-400 uppercase tracking-wider mb-2">
+              <i class="fa-solid fa-sliders text-brand-red mr-1"></i> Jazz Style Preset
+            </label>
+            <div class="grid grid-cols-2 gap-2" id="preset-selector">
+              <button data-preset="neo-soul" class="preset-btn px-3 py-2 rounded bg-black/60 border border-brand-red text-white text-xs font-mono flex items-center justify-between hover:bg-brand-red/20 transition-all">
+                <span>Neo-Soul</span>
+                <i class="fa-solid fa-check text-brand-red text-xs"></i>
+              </button>
+              <button data-preset="bossa" class="preset-btn px-3 py-2 rounded bg-black/60 border border-neutral-800 text-neutral-400 text-xs font-mono flex items-center justify-between hover:bg-brand-red/20 transition-all">
+                <span>Bossa Jazzhop</span>
+                <i class="fa-solid fa-check text-brand-red text-xs hidden"></i>
+              </button>
+              <button data-preset="boom-bap" class="preset-btn px-3 py-2 rounded bg-black/60 border border-neutral-800 text-neutral-400 text-xs font-mono flex items-center justify-between hover:bg-brand-red/20 transition-all">
+                <span>Boom-Bap Lo-Fi</span>
+                <i class="fa-solid fa-check text-brand-red text-xs hidden"></i>
+              </button>
+              <button data-preset="dark-industrial" class="preset-btn px-3 py-2 rounded bg-black/60 border border-neutral-800 text-neutral-400 text-xs font-mono flex items-center justify-between hover:bg-brand-red/20 transition-all">
+                <span>Dark Mechanical</span>
+                <i class="fa-solid fa-check text-brand-red text-xs hidden"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Controls: Drum Toggle & Tempo Slider -->
+          <div class="space-y-4">
+            <div class="flex items-center justify-between p-3 rounded bg-black/40 border border-neutral-800">
+              <span class="text-xs font-mono text-neutral-300 flex items-center gap-2">
+                <i class="fa-solid fa-drum text-brand-red"></i> Include Lo-Fi Drum Beat
+              </span>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="drum-toggle" class="sr-only peer" checked>
+                <div class="w-9 h-5 bg-neutral-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-red"></div>
+              </label>
+            </div>
+
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <label class="text-xs font-mono text-neutral-400 uppercase tracking-wider">
+                  <i class="fa-solid fa-stopwatch text-brand-red mr-1"></i> Tempo (BPM)
+                </label>
+                <span id="bpm-display" class="font-mono text-brand-red font-bold text-xs bg-brand-red/10 px-2.5 py-0.5 rounded border border-brand-red/30">76 BPM</span>
+              </div>
+              <input type="range" id="bpm-slider" min="60" max="115" value="76" class="w-full accent-brand-red bg-black/80 rounded-lg h-2 cursor-pointer">
+            </div>
+          </div>
+
+          <!-- Main Play Control Button -->
+          <div>
+            <button id="play-btn" class="w-full py-4 rounded-xl bg-brand-red text-white font-mono font-bold text-sm tracking-wider uppercase flex items-center justify-center gap-3 shadow-lg shadow-brand-red/25 hover:bg-brand-accent transition-all transform active:scale-98">
+              <i class="fa-solid fa-play text-base" id="play-icon"></i>
+              <span id="play-text">GENERATE & PLAY PROGRESSION</span>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- VISUALIZER & CHORD CHAIN -->
+        <div id="visualizer" class="lg:col-span-7 bg-brand-card rounded-xl p-6 border border-brand-border space-y-6 flex flex-col justify-between">
+          
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-xs font-mono text-neutral-400 uppercase tracking-wider">
+                <i class="fa-solid fa-music text-brand-red mr-1"></i> Generated Jazz Progression
+              </span>
+              <span id="swing-badge" class="text-[10px] font-mono bg-brand-red/10 text-brand-red border border-brand-red/30 px-2 py-0.5 rounded">
+                ReLacks Swing: 64%
+              </span>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="chord-cards"></div>
+          </div>
+
+          <!-- Piano Keyboard Visualizer -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-mono text-neutral-400 uppercase tracking-wider">
+                <i class="fa-solid fa-keyboard text-brand-red mr-1"></i> Real-time Voicing Keyboard
+              </span>
+              <span id="active-voicing-text" class="text-xs font-mono text-brand-red font-semibold">Active Notes: --</span>
+            </div>
+            
+            <div class="bg-black p-4 rounded-xl border border-neutral-800 overflow-x-auto">
+              <div class="flex justify-center min-w-[340px] relative h-28" id="piano-container"></div>
+            </div>
+          </div>
+
+          <!-- Beat Pulse & Actions -->
+          <div class="pt-3 border-t border-brand-border/60 flex flex-col sm:flex-row items-center justify-between gap-4">
+            
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+              <span class="text-xs font-mono text-neutral-400">PULSE:</span>
+              <div class="flex gap-1.5" id="beat-indicators">
+                <div class="w-3 h-8 rounded-sm bg-neutral-900 transition-all border border-neutral-800" id="beat-1"></div>
+                <div class="w-3 h-8 rounded-sm bg-neutral-900 transition-all border border-neutral-800" id="beat-2"></div>
+                <div class="w-3 h-8 rounded-sm bg-neutral-900 transition-all border border-neutral-800" id="beat-3"></div>
+                <div class="w-3 h-8 rounded-sm bg-neutral-900 transition-all border border-neutral-800" id="beat-4"></div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              <button id="copy-script-btn" class="flex-1 sm:flex-none px-3.5 py-2 rounded bg-black border border-neutral-800 text-neutral-300 text-xs font-mono hover:border-brand-red hover:text-white transition-all flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-code text-brand-red"></i> Copy Python Logic
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 2: SIMULATED CLI & CODE PLAYGROUND -->
+    <section id="cli" class="space-y-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-brand-border pb-4">
+        <div>
+          <h2 class="text-2xl font-bold font-mono text-white flex items-center gap-2">
+            <span class="text-brand-red">02.</span> ReLacks PYTHON CLI TERMINAL
+          </h2>
+          <p class="text-xs font-mono text-neutral-400">Simulate command-line arguments and inspect voice leading code</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- TERMINAL -->
+        <div class="lg:col-span-5 bg-black rounded-xl border border-neutral-800 overflow-hidden font-mono text-xs flex flex-col justify-between shadow-xl">
+          <div class="bg-neutral-900/90 px-4 py-2.5 border-b border-neutral-800 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+            </div>
+            <span class="text-neutral-400 text-[11px]">relacks-terminal - python generate.py</span>
+          </div>
+
+          <div class="p-4 space-y-3 font-mono text-neutral-300 min-h-[260px] max-h-[320px] overflow-y-auto" id="terminal-body">
+            <div class="text-neutral-500"># ReLacks Algorithmic CLI Tool</div>
+            <div>
+              <span class="text-emerald-400">relacks@machine</span>:<span class="text-brand-red">~/jazzhop</span>$ python generate.py --key Eb --preset neo-soul --bpm 76
+            </div>
+            <div class="text-neutral-400 pl-2 border-l-2 border-brand-red space-y-1">
+              <p class="text-brand-red">[DSP] Initializing Web Audio & Python Matrix...</p>
+              <p>[CHORDS] Generated 4-Bar Jazz Progression in Eb Major:</p>
+              <p class="text-yellow-400">  1. Fm9     (ii9)   -> [F3, Ab3, C4, Eb4, G4]</p>
+              <p class="text-yellow-400">  2. Bb13    (V13)   -> [Bb2, Ab3, C4, D4, G4]</p>
+              <p class="text-yellow-400">  3. Ebmaj9  (Imaj9) -> [Eb3, G3, Bb3, D4, F4]</p>
+              <p class="text-yellow-400">  4. C7b9b13 (VI7)   -> [C3, Bb3, E4, Ab4, Db5]</p>
+              <p class="text-emerald-400">[SUCCESS] Progression rendered cleanly.</p>
+            </div>
+          </div>
+
+          <div class="bg-neutral-950 p-3 border-t border-neutral-800 flex items-center gap-2">
+            <span class="text-brand-red font-bold">$</span>
+            <input type="text" id="cli-input" value="python generate.py --key Db --preset bossa" class="w-full bg-transparent text-white text-xs font-mono focus:outline-none">
+            <button id="cli-run-btn" class="px-3 py-1 bg-brand-red text-white rounded text-[11px] font-mono hover:bg-brand-accent">RUN</button>
+          </div>
+        </div>
+
+        <!-- CODE TAB VIEWER -->
+        <div class="lg:col-span-7 bg-brand-card rounded-xl border border-brand-border overflow-hidden flex flex-col">
+          <div class="bg-black/80 border-b border-brand-border flex items-center overflow-x-auto text-xs font-mono">
+            <button data-tab="voicings" class="code-tab px-4 py-3 border-b-2 border-brand-red text-white flex items-center gap-2 bg-brand-card">
+              <i class="fa-brands fa-python text-brand-red"></i> chord_voicings.py
+            </button>
+            <button data-tab="voice-leading" class="code-tab px-4 py-3 border-b-2 border-transparent text-neutral-400 hover:text-white flex items-center gap-2">
+              <i class="fa-solid fa-code-branch text-neutral-500"></i> voice_leading.py
+            </button>
+            <button data-tab="midi-export" class="code-tab px-4 py-3 border-b-2 border-transparent text-neutral-400 hover:text-white flex items-center gap-2">
+              <i class="fa-solid fa-file-export text-neutral-500"></i> midi_writer.py
+            </button>
+          </div>
+
+          <div class="p-4 bg-black/90 font-mono text-xs overflow-x-auto flex-grow min-h-[260px]">
+            <pre id="code-content" class="text-neutral-300 leading-relaxed"><code><span class="text-purple-400">class</span> <span class="text-yellow-300">ReLacksJazzVoicings</span>:
+    <span class="text-neutral-500">"""
+    Created by ReLacks: 4-part & 5-part shell chord voicing algorithms
+    containing 7th, 9th, and 13th extensions with rootless option.
+    """</span>
+    <span class="text-purple-400">def</span> <span class="text-blue-400">build_jazz_extension</span>(self, root_midi, chord_type=<span class="text-emerald-300">'m9'</span>):
+        extensions = {
+            <span class="text-emerald-300">'m9'</span>:    [0, 3, 7, 10, 14],   <span class="text-neutral-500"># 1 - b3 - 5 - b7 - 9</span>
+            <span class="text-emerald-300">'13'</span>:    [0, 4, 7, 10, 21],   <span class="text-neutral-500"># 1 - 3 - 5 - b7 - 13</span>
+            <span class="text-emerald-300">'maj9'</span>:  [0, 4, 7, 11, 14],   <span class="text-neutral-500"># 1 - 3 - 5 - 7 - 9</span>
+            <span class="text-emerald-300">'7b9'</span>:   [0, 4, 10, 13, 20]   <span class="text-neutral-500"># 1 - 3 - b7 - b9 - b13</span>
+        }
+        <span class="text-purple-400">return</span> [root_midi + interval <span class="text-purple-400">for</span> interval <span class="text-purple-400">in</span> extensions[chord_type]]</code></pre>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- SECTION 3: REPO SHOWCASE & SETUP -->
+    <section id="repo" class="space-y-6">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-brand-border pb-4">
+        <div>
+          <h2 class="text-2xl font-bold font-mono text-white flex items-center gap-2">
+            <span class="text-brand-red">03.</span> REPOSITORY SETUP
+          </h2>
+          <p class="text-xs font-mono text-neutral-400">Clone and run ReLacks' generator locally on your machine</p>
+        </div>
+      </div>
+
+      <div class="bg-black p-5 rounded-xl border border-neutral-800 space-y-3 font-mono">
+        <div class="flex items-center justify-between text-xs text-neutral-400">
+          <span><i class="fa-solid fa-terminal text-brand-red mr-1"></i> INSTALLATION & RUN COMMANDS</span>
+          <button id="copy-setup-btn" class="hover:text-brand-red transition-colors text-xs">
+            <i class="fa-regular fa-copy mr-1"></i> Copy Commands
+          </button>
+        </div>
+
+        <div class="bg-neutral-950 p-4 rounded border border-neutral-900 text-xs text-neutral-300 space-y-2 overflow-x-auto">
+          <p><span class="text-brand-red"># 1. Clone repository by ReLacks</span></p>
+          <p class="text-emerald-400">git clone https://github.com/relacks/algorithmic-jazzhop-generator.git</p>
+          <p class="pt-2"><span class="text-brand-red"># 2. Install dependencies (mido & music21)</span></p>
+          <p class="text-emerald-400">cd algorithmic-jazzhop-generator && pip install -r requirements.txt</p>
+          <p class="pt-2"><span class="text-brand-red"># 3. Generate your first jazzhop progression</span></p>
+          <p class="text-emerald-400">python generate.py --key Eb --preset neo-soul --bpm 76</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-brand-border bg-black py-8 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-mono text-neutral-400">
+      <div>
+        <p class="text-white font-bold">Created by <span class="text-brand-red">ReLacks</span></p>
+        <p class="text-neutral-500">Mechanical Engineering x Music Synthesis | Your Tinkered Grooves</p>
+      </div>
+      <div class="text-center md:text-right text-neutral-500">
+        <p>Powered by Web Audio API & Python DSP Logic</p>
+        <p class="text-[10px] mt-0.5">© 2026 ReLacks. Open source under MIT License.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // State variables
+    let selectedKey = 'Eb';
+    let selectedPreset = 'neo-soul';
+    let bpm = 76;
+    let isPlaying = false;
+    let currentChordIndex = 0;
+    let beatStep = 0;
+    let audioCtx = null;
+    let timerId = null;
+    let drumTimerId = null;
+
+    const keys = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+    // Semitone offsets relative to C
+    const KEY_OFFSETS = {
+      'C': 0, 'Db': 1, 'D': 2, 'Eb': 3, 'E': 4, 'F': 5,
+      'Gb': 6, 'G': 7, 'Ab': 8, 'A': 9, 'Bb': 10, 'B': 11
+    };
+
+    // Note pitch names helper
+    const NOTE_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+    function midiToNoteName(midi) {
+      const note = NOTE_NAMES[midi % 12];
+      const octave = Math.floor(midi / 12) - 1;
+      return `${note}${octave}`;
+    }
+
+    // Base progressions defined relative to Root (0)
+    const basePresets = {
+      'neo-soul': {
+        name: 'Neo-Soul',
+        chords: [
+          { nameSuffix: 'm9', roman: 'ii9', relMidi: [5, 8, 12, 15, 19] },      // ii9
+          { nameSuffix: '13', roman: 'V13', relMidi: [-2, 8, 12, 14, 19] },     // V13
+          { nameSuffix: 'maj9', roman: 'Imaj9', relMidi: [0, 4, 7, 11, 14] },   // Imaj9
+          { nameSuffix: '7b9b13', roman: 'VI7', relMidi: [9, 19, 25, 29, 34] }  // VI7
+        ]
+      },
+      'bossa': {
+        name: 'Bossa Jazzhop',
+        chords: [
+          { nameSuffix: 'maj9', roman: 'Imaj9', relMidi: [0, 4, 7, 11, 14] },   // Imaj9
+          { nameSuffix: '7alt', roman: 'VI7alt', relMidi: [9, 19, 25, 29, 34] },// VI7alt
+          { nameSuffix: 'm9', roman: 'ii9', relMidi: [2, 5, 9, 12, 16] },      // ii9
+          { nameSuffix: '13', roman: 'V13', relMidi: [7, 17, 23, 28, 33] }     // V13
+        ]
+      },
+      'boom-bap': {
+        name: 'Boom-Bap Lo-Fi',
+        chords: [
+          { nameSuffix: 'maj7', roman: 'IVmaj7', relMidi: [5, 9, 12, 16] },     // IVmaj7
+          { nameSuffix: '7b9', roman: 'III7', relMidi: [4, 8, 14, 17] },        // III7
+          { nameSuffix: 'm9', roman: 'vi9', relMidi: [9, 12, 16, 19, 23] },     // vi9
+          { nameSuffix: '13', roman: 'VII13', relMidi: [7, 17, 23, 28] }        // VII13
+        ]
+      },
+      'dark-industrial': {
+        name: 'Dark Mechanical',
+        chords: [
+          { nameSuffix: 'm9', roman: 'i9', relMidi: [0, 3, 7, 10, 14] },       // i9
+          { nameSuffix: '13', roman: 'IV13', relMidi: [5, 15, 21, 26] },       // IV13
+          { nameSuffix: 'maj9', roman: 'VIImaj9', relMidi: [10, 14, 17, 21, 24] },// VIImaj9
+          { nameSuffix: '7b9', roman: 'V7b9', relMidi: [7, 11, 17, 20] }      // V7b9
+        ]
+      }
+    };
+
+    // Calculate dynamic transposed chords based on selected key
+    function getTransposedChords() {
+      const rootOffset = KEY_OFFSETS[selectedKey] || 0;
+      const baseOctaveMidi = 48 + rootOffset; // Base C3 offset
+
+      return basePresets[selectedPreset].chords.map(c => {
+        const midiNotes = c.relMidi.map(m => baseOctaveMidi + m);
+        const rootNoteName = NOTE_NAMES[midiNotes[0] % 12];
+        const chordName = `${rootNoteName}${c.nameSuffix}`;
+        const noteNames = midiNotes.map(m => midiToNoteName(m));
+
+        return {
+          name: chordName,
+          roman: c.roman,
+          notes: noteNames,
+          midi: midiNotes
+        };
+      });
+    }
+
+    const codeSnippets = {
+      voicings: `<span class="text-purple-400">class</span> <span class="text-yellow-300">ReLacksJazzVoicings</span>:
+    <span class="text-neutral-500">"""
+    Created by ReLacks: 4-part & 5-part shell chord voicing algorithms
+    containing 7th, 9th, and 13th extensions with rootless option.
+    """</span>
+    <span class="text-purple-400">def</span> <span class="text-blue-400">build_jazz_extension</span>(self, root_midi, chord_type=<span class="text-emerald-300">'m9'</span>):
+        extensions = {
+            <span class="text-emerald-300">'m9'</span>:    [0, 3, 7, 10, 14],   <span class="text-neutral-500"># 1 - b3 - 5 - b7 - 9</span>
+            <span class="text-emerald-300">'13'</span>:    [0, 4, 7, 10, 21],   <span class="text-neutral-500"># 1 - 3 - 5 - b7 - 13</span>
+            <span class="text-emerald-300">'maj9'</span>:  [0, 4, 7, 11, 14],   <span class="text-neutral-500"># 1 - 3 - 5 - 7 - 9</span>
+            <span class="text-emerald-300">'7b9'</span>:   [0, 4, 10, 13, 20]   <span class="text-neutral-500"># 1 - 3 - b7 - b9 - b13</span>
+        }
+        <span class="text-purple-400">return</span> [root_midi + interval <span class="text-purple-400">for</span> interval <span class="text-purple-400">in</span> extensions[chord_type]]`,
+
+      'voice-leading': `<span class="text-purple-400">def</span> <span class="text-blue-400">minimize_voice_leading_distance</span>(prev_chord, next_chord_notes):
+    <span class="text-neutral-500">"""
+    Smooth voice leading algorithm by ReLacks. Minimizes jump distance 
+    between guide tones (3rds and 7ths) across jazz progression transitions.
+    """</span>
+    optimized = []
+    <span class="text-purple-400">for</span> note <span class="text-purple-400">in</span> next_chord_notes:
+        closest = min(prev_chord, key=<span class="text-purple-400">lambda</span> x: abs((x % 12) - (note % 12)))
+        octave_shift = (closest // 12) * 12
+        optimized.append((note % 12) + octave_shift)
+    <span class="text-purple-400">return</span> sorted(optimized)`,
+
+      'midi-export': `<span class="text-purple-400">import</span> mido
+<span class="text-purple-400">from</span> mido <span class="text-purple-400">import</span> Message, MidiFile, MidiTrack
+
+<span class="text-purple-400">def</span> <span class="text-blue-400">export_relacks_midi</span>(progression, bpm=76, filename=<span class="text-emerald-300">"jazzhop.mid"</span>):
+    mid = MidiFile()
+    track = MidiTrack()
+    mid.tracks.append(track)
+    ticks_per_beat = mid.ticks_per_beat
+    
+    <span class="text-purple-400">for</span> chord <span class="text-purple-400">in</span> progression:
+        <span class="text-purple-400">for</span> note <span class="text-purple-400">in</span> chord.midi_notes:
+            track.append(Message(<span class="text-emerald-300">'note_on'</span>, note=note, velocity=78, time=0))
+        <span class="text-purple-400">for</span> i, note <span class="text-purple-400">in</span> enumerate(chord.midi_notes):
+            time = ticks_per_beat * 4 <span class="text-purple-400">if</span> i == 0 <span class="text-purple-400">else</span> 0
+            track.append(Message(<span class="text-emerald-300">'note_off'</span>, note=note, velocity=0, time=time))
+    mid.save(filename)`
+    };
+
+    // Initialize UI
+    window.addEventListener('DOMContentLoaded', () => {
+      renderKeys();
+      renderChordCards();
+      renderPiano();
+      setupEventListeners();
+    });
+
+    function renderKeys() {
+      const container = document.getElementById('key-selector');
+      container.innerHTML = keys.map(k => `
+        <button data-key="${k}" class="key-btn py-1.5 rounded font-mono text-xs font-bold border ${k === selectedKey ? 'bg-brand-red text-white border-brand-red' : 'bg-black/50 text-neutral-400 border-neutral-800 hover:border-brand-red'} transition-all">
+          ${k}
+        </button>
+      `).join('');
+
+      document.querySelectorAll('.key-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          selectedKey = e.currentTarget.dataset.key;
+          renderKeys();
+          renderChordCards();
+          renderPiano();
+          if (isPlaying) {
+            playCurrentChord();
+          }
+        });
+      });
+    }
+
+    function renderChordCards() {
+      const container = document.getElementById('chord-cards');
+      const chords = getTransposedChords();
+
+      container.innerHTML = chords.map((c, i) => `
+        <div id="chord-card-${i}" class="chord-card p-3 rounded-lg bg-black/60 border border-neutral-800 flex flex-col justify-between transition-all">
+          <div class="flex justify-between items-start">
+            <span class="text-[10px] font-mono text-neutral-500">BAR 0${i+1}</span>
+            <span class="text-[10px] font-mono text-brand-red bg-brand-red/10 px-1.5 py-0.5 rounded border border-brand-red/20">${c.roman}</span>
+          </div>
+          <div class="my-2">
+            <h4 class="font-mono font-bold text-white text-lg">${c.name}</h4>
+          </div>
+          <div class="text-[10px] font-mono text-neutral-400 truncate">
+            ${c.notes.join(' • ')}
+          </div>
+        </div>
+      `).join('');
+
+      if (isPlaying) {
+        const activeCard = document.getElementById(`chord-card-${currentChordIndex}`);
+        if (activeCard) activeCard.classList.add('glow-border', 'border-brand-red');
+      }
+    }
+
+    function renderPiano() {
+      const container = document.getElementById('piano-container');
+      
+      // Extended piano range (MIDI 48 C3 to MIDI 83 B5)
+      const whiteKeys = [
+        48, 50, 52, 53, 55, 57, 59, // Octave 3
+        60, 62, 64, 65, 67, 69, 71, // Octave 4
+        72, 74, 76, 77, 79, 81, 83  // Octave 5
+      ];
+
+      const blackKeys = [
+        { midi: 49, whiteIndex: 0 }, { midi: 51, whiteIndex: 1 },
+        { midi: 54, whiteIndex: 3 }, { midi: 56, whiteIndex: 4 }, { midi: 58, whiteIndex: 5 },
+        
+        { midi: 61, whiteIndex: 7 }, { midi: 63, whiteIndex: 8 },
+        { midi: 66, whiteIndex: 10 }, { midi: 68, whiteIndex: 11 }, { midi: 70, whiteIndex: 12 },
+
+        { midi: 73, whiteIndex: 14 }, { midi: 75, whiteIndex: 15 },
+        { midi: 78, whiteIndex: 17 }, { midi: 80, whiteIndex: 18 }, { midi: 82, whiteIndex: 19 }
+      ];
+
+      let html = whiteKeys.map(m => `
+        <div data-midi="${m}" class="piano-key-white piano-key flex-1 h-full border border-neutral-400/20 rounded-b-md mx-[1px] relative"></div>
+      `).join('');
+
+      const totalWhiteKeys = whiteKeys.length;
+      const keyWidthPercent = 100 / totalWhiteKeys;
+
+      blackKeys.forEach(b => {
+        const leftPercent = (b.whiteIndex + 0.68) * keyWidthPercent;
+        html += `<div data-midi="${b.midi}" class="piano-key-black piano-key absolute top-0 h-[60%] z-10 rounded-b-md" style="left: ${leftPercent}%; width: ${keyWidthPercent * 0.65}%"></div>`;
+      });
+
+      container.innerHTML = html;
+
+      if (isPlaying) {
+        highlightCurrentChordOnPiano();
+      }
+    }
+
+    function setupEventListeners() {
+      // Preset Selection
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.preset-btn').forEach(b => {
+            b.classList.remove('border-brand-red', 'text-white');
+            b.classList.add('border-neutral-800', 'text-neutral-400');
+            b.querySelector('.fa-check').classList.add('hidden');
+          });
+
+          const target = e.currentTarget;
+          target.classList.add('border-brand-red', 'text-white');
+          target.classList.remove('border-neutral-800', 'text-neutral-400');
+          target.querySelector('.fa-check').classList.remove('hidden');
+
+          selectedPreset = target.dataset.preset;
+          renderChordCards();
+          if (isPlaying) playCurrentChord();
+        });
+      });
+
+      // Tempo Slider
+      const slider = document.getElementById('bpm-slider');
+      slider.addEventListener('input', (e) => {
+        bpm = e.target.value;
+        document.getElementById('bpm-display').textContent = `${bpm} BPM`;
+        if (isPlaying) restartProgression();
+      });
+
+      // Play Buttons
+      document.getElementById('play-btn').addEventListener('click', togglePlay);
+      document.getElementById('quick-play-header').addEventListener('click', togglePlay);
+
+      // Code Tabs
+      document.querySelectorAll('.code-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          document.querySelectorAll('.code-tab').forEach(t => {
+            t.classList.remove('border-brand-red', 'text-white', 'bg-brand-card');
+            t.classList.add('border-transparent', 'text-neutral-400');
+          });
+          const target = e.currentTarget;
+          target.classList.add('border-brand-red', 'text-white', 'bg-brand-card');
+          target.classList.remove('border-transparent', 'text-neutral-400');
+
+          const tabKey = target.dataset.tab;
+          document.getElementById('code-content').innerHTML = `<code>${codeSnippets[tabKey]}</code>`;
+        });
+      });
+
+      // CLI Command Runner
+      document.getElementById('cli-run-btn').addEventListener('click', executeCLI);
+      document.getElementById('cli-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') executeCLI();
+      });
+
+      // Copy setup script
+      document.getElementById('copy-setup-btn').addEventListener('click', () => {
+        const text = "git clone https://github.com/relacks/algorithmic-jazzhop-generator.git\ncd algorithmic-jazzhop-generator && pip install -r requirements.txt\npython generate.py --key Eb --preset neo-soul --bpm 76";
+        navigator.clipboard.writeText(text);
+        alert("Setup commands copied to clipboard!");
+      });
+
+      document.getElementById('copy-script-btn').addEventListener('click', () => {
+        navigator.clipboard.writeText(codeSnippets['voicings'].replace(/<[^>]*>/g, ''));
+        alert("Python chord voicing script copied to clipboard!");
+      });
+    }
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function togglePlay() {
+      initAudio();
+      if (isPlaying) {
+        stopProgression();
+      } else {
+        startProgression();
+      }
+    }
+
+    function startProgression() {
+      isPlaying = true;
+      currentChordIndex = 0;
+      beatStep = 0;
+
+      document.getElementById('play-icon').className = 'fa-solid fa-square text-base';
+      document.getElementById('play-text').textContent = 'STOP ENGINE';
+
+      playCurrentChord();
+
+      const secondsPerBeat = 60 / bpm;
+      const secondsPerBar = secondsPerBeat * 4;
+
+      timerId = setInterval(() => {
+        currentChordIndex = (currentChordIndex + 1) % 4;
+        playCurrentChord();
+      }, secondsPerBar * 1000);
+
+      // Beat Pulse Timer
+      drumTimerId = setInterval(() => {
+        beatStep = (beatStep + 1) % 4;
+        updateBeatPulse(beatStep);
+        if (document.getElementById('drum-toggle').checked) {
+          playDrumStep(beatStep);
+        }
+      }, secondsPerBeat * 1000);
+    }
+
+    function stopProgression() {
+      isPlaying = false;
+      clearInterval(timerId);
+      clearInterval(drumTimerId);
+
+      document.getElementById('play-icon').className = 'fa-solid fa-play text-base';
+      document.getElementById('play-text').textContent = 'GENERATE & PLAY PROGRESSION';
+
+      document.querySelectorAll('.chord-card').forEach(c => c.classList.remove('glow-border', 'border-brand-red'));
+      document.querySelectorAll('.piano-key').forEach(k => k.classList.remove('active'));
+      document.querySelectorAll('#beat-indicators > div').forEach(b => b.className = 'w-3 h-8 rounded-sm bg-neutral-900 border border-neutral-800');
+      document.getElementById('active-voicing-text').textContent = 'Active Notes: --';
+    }
+
+    function restartProgression() {
+      stopProgression();
+      startProgression();
+    }
+
+    function playCurrentChord() {
+      const chords = getTransposedChords();
+      const chord = chords[currentChordIndex];
+
+      // Highlight Card
+      document.querySelectorAll('.chord-card').forEach((c, idx) => {
+        if (idx === currentChordIndex) {
+          c.classList.add('glow-border', 'border-brand-red');
+        } else {
+          c.classList.remove('glow-border', 'border-brand-red');
+        }
+      });
+
+      highlightCurrentChordOnPiano();
+
+      document.getElementById('active-voicing-text').textContent = `Active: ${chord.name} (${chord.notes.join(', ')})`;
+
+      // Synthesize Chord Tone
+      chord.midi.forEach(midiVal => {
+        playSynthPitch(midiToFreq(midiVal), 1.8);
+      });
+    }
+
+    function highlightCurrentChordOnPiano() {
+      const chords = getTransposedChords();
+      const chord = chords[currentChordIndex];
+      
+      document.querySelectorAll('.piano-key').forEach(k => k.classList.remove('active'));
+      chord.midi.forEach(midiVal => {
+        const keyEl = document.querySelector(`.piano-key[data-midi="${midiVal}"]`);
+        if (keyEl) keyEl.classList.add('active');
+      });
+    }
+
+    function playSynthPitch(freq, duration) {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    function playDrumStep(step) {
+      if (!audioCtx) return;
+      // Kick on 0, Snare on 2, Hat on all
+      if (step === 0) playKick();
+      if (step === 2) playSnare();
+      playHiHat();
+    }
+
+    function playKick() {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.setValueAtTime(120, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3);
+    }
+
+    function playSnare() {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(180, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.2);
+    }
+
+    function playHiHat() {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(8000, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.05);
+    }
+
+    function updateBeatPulse(step) {
+      for (let i = 1; i <= 4; i++) {
+        const el = document.getElementById(`beat-${i}`);
+        if (i - 1 === step) {
+          el.className = 'w-3 h-8 rounded-sm bg-brand-red border border-brand-red shadow-lg shadow-brand-red/50';
+        } else {
+          el.className = 'w-3 h-8 rounded-sm bg-neutral-900 border border-neutral-800';
+        }
+      }
+    }
+
+    function executeCLI() {
+      const input = document.getElementById('cli-input').value;
+      const body = document.getElementById('terminal-body');
+
+      const cmdEl = document.createElement('div');
+      cmdEl.innerHTML = `<span class="text-emerald-400">relacks@machine</span>:<span class="text-brand-red">~/jazzhop</span>$ ${input}`;
+      body.appendChild(cmdEl);
+
+      const resEl = document.createElement('div');
+      resEl.className = 'text-neutral-400 pl-2 border-l-2 border-brand-red space-y-1 my-2';
+      resEl.innerHTML = `
+        <p class="text-brand-red">[ReLacks Engine] Executing command...</p>
+        <p class="text-yellow-400">-> Parsed parameters: key=${selectedKey}, preset=${selectedPreset}, bpm=${bpm}</p>
+        <p class="text-emerald-400">[SUCCESS] Exported MIDI data to ./export/relacks_${selectedKey}_${selectedPreset}.mid</p>
+      `;
+      body.appendChild(resEl);
+      body.scrollTop = body.scrollHeight;
+    }
+
+    function midiToFreq(midi) {
+      return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+  </script>
+</body>
+</html>
