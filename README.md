@@ -1,5 +1,7 @@
 The ReLacks Producer Engine is an interactive, web-based algorithmic music generator designed to bridge structural engineering logic with music theory and sound synthesis. Built specifically for Jazzhop, Neo-Soul, and Lo-Fi production workflows, it proceduralizes complex jazz chord voicings and syncopated hip-hop rhythms into real-time audio and visual feedback.
 
+<img width="470" height="412" alt="image" src="https://github.com/user-attachments/assets/5491d459-f7ef-4e09-9cbf-bae0a469a4ea" />
+
 ⚙️Key Features
 
 Dynamic Web Audio Synthesis: Synthesizes polyphonic jazz voicings (7ths, 9ths, 11ths, 13ths, shell voicings) and customizable drum patterns (kick, snare, hi-hats) on the fly using the browser's Web Audio API.
